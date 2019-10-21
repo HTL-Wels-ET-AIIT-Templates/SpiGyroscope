@@ -1,3 +1,10 @@
+.hg/
+Projects/STM32F429ZI-Nucleo/Applications/Cloud/Bluemix/MDK-ARM/obj/*
+obj/*
+Projects/STM32F429ZI-Nucleo/Applications/Cloud/Bluemix/MDK-ARM/*.dep
+Projects/STM32F429ZI-Nucleo/Applications/Cloud/Bluemix/MDK-ARM/*.uvgui.*
+Projects/STM32F429ZI-Nucleo/Applications/Cloud/Bluemix/MDK-ARM/*.bak
+
 # Prerequisites
 *.d
 
@@ -50,3 +57,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+*.crf
+*.bak
+obj/*
+*.dep
+*.uvgui.*
+
