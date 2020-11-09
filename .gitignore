@@ -62,4 +62,6 @@ dkms.conf
 obj/*
 *.dep
 *.uvgui.*
+*.uvguix.*
+
 
