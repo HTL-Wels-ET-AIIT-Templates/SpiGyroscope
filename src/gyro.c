@@ -81,6 +81,7 @@ static void gpioInit(void)
   * @retval None
   */
 void spiInit(void) {
+	SPI_I2S_DeInit(SPI5);
 	// TODO: What SPI is used? -> Configure it!
 
 
