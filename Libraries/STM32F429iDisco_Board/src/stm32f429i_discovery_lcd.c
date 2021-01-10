@@ -28,8 +28,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f429i_discovery_lcd.h"
-#include "fonts.c"
-
+#include <stdio.h>
 
 /** @addtogroup Utilities
   * @{
@@ -306,6 +305,7 @@ void LCD_Init(void)
   LTDC_InitStruct.LTDC_TotalHeigh = 327;
   
   LTDC_Init(&LTDC_InitStruct);
+  setvbuf(stdout, NULL, _IONBF, 0);
 }  
 
 /**
@@ -745,6 +745,12 @@ void LCD_DrawLine(uint16_t Xpos, uint16_t Ypos, uint16_t Length, uint8_t Directi
   
   uint32_t  Xaddress = 0;
   uint16_t Red_Value = 0, Green_Value = 0, Blue_Value = 0;
+
+	if (Xpos > LCD_PIXEL_WIDTH || Ypos > LCD_PIXEL_HEIGHT || Length == 0 ||
+		(Xpos + Length > LCD_PIXEL_WIDTH && Direction == LCD_DIR_HORIZONTAL) ||
+		(Ypos + Length > LCD_PIXEL_HEIGHT && Direction == LCD_DIR_VERTICAL)) {
+			return;
+	}
   
   Xaddress = CurrentFrameBuffer + 2*(LCD_PIXEL_WIDTH*Ypos + Xpos);
  
@@ -813,21 +819,28 @@ void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width)
   */
 void LCD_DrawCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius)
 {
-    int x = -Radius, y = 0, err = 2-2*Radius, e2;
-    do {
-        *(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos-x) + LCD_PIXEL_WIDTH*(Ypos+y)))) = CurrentTextColor; 
-        *(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos+x) + LCD_PIXEL_WIDTH*(Ypos+y)))) = CurrentTextColor;
-        *(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos+x) + LCD_PIXEL_WIDTH*(Ypos-y)))) = CurrentTextColor;
-        *(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos-x) + LCD_PIXEL_WIDTH*(Ypos-y)))) = CurrentTextColor;
-      
-        e2 = err;
-        if (e2 <= y) {
-            err += ++y*2+1;
-            if (-x == y && e2 <= x) e2 = 0;
-        }
-        if (e2 > x) err += ++x*2+1;
-    }
-    while (x <= 0);
+	int x = -Radius, y = 0, err = 2-2*Radius, e2;
+
+	if (Xpos + Radius > LCD_PIXEL_WIDTH || Xpos - Radius < 0 ||
+		Ypos + Radius > LCD_PIXEL_HEIGHT || Ypos - Radius < 0 ||
+	  Radius == 0) {
+			return;
+	}
+
+	do {
+			*(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos-x) + LCD_PIXEL_WIDTH*(Ypos+y)))) = CurrentTextColor;
+			*(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos+x) + LCD_PIXEL_WIDTH*(Ypos+y)))) = CurrentTextColor;
+			*(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos+x) + LCD_PIXEL_WIDTH*(Ypos-y)))) = CurrentTextColor;
+			*(__IO uint16_t*) (CurrentFrameBuffer + (2*((Xpos-x) + LCD_PIXEL_WIDTH*(Ypos-y)))) = CurrentTextColor;
+
+			e2 = err;
+			if (e2 <= y) {
+					err += ++y*2+1;
+					if (-x == y && e2 <= x) e2 = 0;
+			}
+			if (e2 > x) err += ++x*2+1;
+	}
+	while (x <= 0);
 }
 
 /**
@@ -899,7 +912,13 @@ void LCD_DrawEllipse(int Xpos, int Ypos, int Radius, int Radius2)
 {
   int x = -Radius, y = 0, err = 2-2*Radius, e2;
   float K = 0, rad1 = 0, rad2 = 0;
-   
+
+	if (Xpos + Radius > LCD_PIXEL_WIDTH || Xpos - Radius < 0 ||
+		Ypos + Radius2 > LCD_PIXEL_HEIGHT || Ypos - Radius2 < 0 ||
+	  Radius == 0 || Radius2 ==0) {
+			return;
+	}
+
   rad1 = Radius;
   rad2 = Radius2;
   
@@ -1092,6 +1111,12 @@ void LCD_DrawFullRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Hei
   
   uint32_t  Xaddress = 0; 
   uint16_t Red_Value = 0, Green_Value = 0, Blue_Value = 0;
+
+	if (Xpos > LCD_PIXEL_WIDTH || Ypos > LCD_PIXEL_HEIGHT || Width == 0 || Height == 0 ||
+		Xpos + Width > LCD_PIXEL_WIDTH || Ypos + Height > LCD_PIXEL_HEIGHT) {
+			return;
+	}
+
  
   Red_Value = (0xF800 & CurrentTextColor) >> 11;
   Blue_Value = 0x001F & CurrentTextColor;
@@ -1944,11 +1969,12 @@ static void delay(__IO uint32_t nCount)
 }
 #endif /* USE_Delay*/
 
-// 19-oct-2015  scmi
+
+
+// 18-okt-2013  kin
 
 static unsigned int  Line=0;
 static unsigned int  Column=0;
-#include <stdio.h>
 
 #define COLUMN(x) ((x) * (((sFONT *)LCD_GetFont())->Width))
 
@@ -1963,8 +1989,21 @@ void LCD_SetPrintPosition(unsigned int ln, unsigned int col)
 	Column 	= ( col <= MAX_COLUMN ) ? col : MAX_COLUMN;
 }
 
+int __io_putchar(int ch)
+{
+ fputc(ch, stdout);
+ return ch;
+}
 
-
+int _write(int file,char *ptr, int len)
+{
+ int DataIdx;
+ for(DataIdx= 0; DataIdx< len; DataIdx++)
+ {
+ __io_putchar(*ptr++);
+ }
+return len;
+}
 
 int fputc(int ch, FILE *f)
 {
@@ -1999,6 +2038,48 @@ int fputc(int ch, FILE *f)
 
 	return (0);
 }
+
+
+
+#ifdef  USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t* file, uint32_t line)
+{
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+	LCD_SetFont(&Font12x12);
+	LCD_SetPrintPosition(1,0);
+	LCD_Clear(LCD_COLOR_WHITE);
+	LCD_SetColors(LCD_COLOR_RED, LCD_COLOR_WHITE); // TextColor,BackColor
+
+	printf("Assert failed\n\nFile:\n%s\n\nLine:%4d",file,line);
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+
+//void assert_failed(uint8_t* file, uint32_t line)
+//{
+//  GLCD_Init();                          /* Initialize graphical LCD display   */
+//	GLCD_Clear(Black);
+//  GLCD_SetBackColor(Black);
+//  GLCD_SetTextColor(Red);
+//	GLCD_SetPrintPosition(0, 0);
+
+//	printf("Assert failed\nFile:\n%s\nLine:%4d",file,line);
+
+//	while(1);
+//}
 
 
 /**

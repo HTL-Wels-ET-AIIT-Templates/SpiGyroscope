@@ -487,6 +487,11 @@
               <FileType>1</FileType>
               <FilePath>.\Libraries\STM32F429iDisco_Board\src\stm32f429i_discovery_sdram.c</FilePath>
             </File>
+            <File>
+              <FileName>fonts.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Libraries\STM32F429iDisco_Board\src\fonts.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
