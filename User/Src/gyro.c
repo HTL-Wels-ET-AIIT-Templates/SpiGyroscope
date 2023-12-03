@@ -24,13 +24,14 @@
 
 SPI_HandleTypeDef spiHandle;
 
+static int ballDirection = 0;
+
 // Function Declarations ------------------------------------------------------
 static void gpioInit(void);
 static void spiInit(void);
 static void gyroConfig(void);
 static void gyroWrite(uint8_t* pBuffer, uint8_t writeAddr, uint16_t numByteToWrite);
 static void gyroRead(uint8_t* pBuffer, uint8_t readAddr, uint16_t numByteToRead);
-static uint8_t gyroSendByte(uint8_t byte);
 
 static void movingBall(void);
 static void setBallDirection(int dir);
@@ -68,6 +69,38 @@ void gyroTask(void) {
 
 }
 
+/**
+ * @brief  draw the moving ball
+ * @param  None
+ * @retval None
+ */
+static void movingBall(void) {
+	static int x = 120;
+	static int y = 290;
+
+	LCD_SetTextColor(LCD_COLOR_BLACK);
+	LCD_FillCircle(x, y, 10);
+
+	if (ballDirection > 0 && x < LCD_GetXSize()) {
+		x++;
+	}
+	if (ballDirection < 0 && x > 0) {
+		x--;
+	}
+
+	LCD_SetTextColor(LCD_COLOR_YELLOW);
+	LCD_FillCircle(x, y, 10);
+
+}
+
+/**
+ * @brief  change direction of moving ball
+ * @param  dir direction (0 stop, 1 move right, -1 move left)
+ * @retval None
+ */
+static void setBallDirection(int dir) {
+	ballDirection = dir;
+}
 
 /**
  * @brief  configure gpios for application
@@ -120,14 +153,17 @@ static void gyroWrite(uint8_t* pBuffer, uint8_t writeAddr, uint16_t numByteToWri
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
 
 	/* Send the Address of the indexed register */
-	gyroSendByte(writeAddr);
+	if(HAL_SPI_Transmit(&spiHandle, &writeAddr, 1, L3GD20_FLAG_TIMEOUT) != HAL_OK)
+	{
+		/* Transfer error in transmission process */
+		Error_Handler();
+	}
 
 	/* Send the data that will be written into the device (MSB First) */
-	while(numByteToWrite > 0x00)
+	if(HAL_SPI_Transmit(&spiHandle, pBuffer, numByteToWrite, L3GD20_FLAG_TIMEOUT) != HAL_OK)
 	{
-		gyroSendByte(*pBuffer);
-		numByteToWrite--;
-		pBuffer++;
+		/* Transfer error in transmission process */
+		Error_Handler();
 	}
 
 	/* Set chip select High at the end of the transmission */
@@ -152,24 +188,5 @@ static void gyroRead(uint8_t* pBuffer, uint8_t readAddr, uint16_t numByteToRead)
 	}
 }  
 
-/**
- * @brief  Sends a Byte through the SPI interface and return the Byte received
- *         from the SPI bus.
- * @param  Byte : Byte send.
- * @retval The received byte value
- */
-static uint8_t gyroSendByte(uint8_t byte)
-{
-	uint8_t rx;
-	/* Send a Byte through the SPI peripheral */
-	if(HAL_SPI_TransmitReceive(&spiHandle, &byte, &rx, 1, L3GD20_FLAG_TIMEOUT) != HAL_OK)
-	{
-		/* Transfer error in transmission process */
-		Error_Handler();
-	}
-
-	/* Return the Byte read from the SPI bus */
-	return rx;
-}
 
 
