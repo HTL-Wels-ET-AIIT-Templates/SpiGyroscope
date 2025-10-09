@@ -141,33 +141,20 @@ static void gyroConfig(void) {
  */
 static void gyroWrite(uint8_t* pBuffer, uint8_t writeAddr, uint16_t numByteToWrite)
 {
-	/* Configure the MS bit:
-       - When 0, the address will remain unchanged in multiple read/write commands.
-       - When 1, the address will be auto incremented in multiple read/write commands.
+	// TODO: Implement gyroWrite(): Writing to registers of gyro
+	/* Write Bit has to be set to 0
+	 * Value of the MS bit:
+	 * - When 0, the address will remain unchanged in multiple read/write commands.
+	 * - When 1, the address will be auto incremented in multiple read/write commands.
 	 */
 	if(numByteToWrite > 0x01)
 	{
-		writeAddr |= (uint8_t)0x40;
-	}
-	/* Set chip select Low at the start of the transmission */
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
 
-	/* Send the Address of the indexed register */
-	if(HAL_SPI_Transmit(&spiHandle, &writeAddr, 1, L3GD20_FLAG_TIMEOUT) != HAL_OK)
-	{
-		/* Transfer error in transmission process */
-		Error_Handler();
 	}
 
-	/* Send the data that will be written into the device (MSB First) */
-	if(HAL_SPI_Transmit(&spiHandle, pBuffer, numByteToWrite, L3GD20_FLAG_TIMEOUT) != HAL_OK)
-	{
-		/* Transfer error in transmission process */
-		Error_Handler();
-	}
 
-	/* Set chip select High at the end of the transmission */
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+
+
 }
 
 /**
@@ -179,13 +166,38 @@ static void gyroWrite(uint8_t* pBuffer, uint8_t writeAddr, uint16_t numByteToWri
  */
 static void gyroRead(uint8_t* pBuffer, uint8_t readAddr, uint16_t numByteToRead)
 {  
-	// TODO: Implement reading of registers from gyroscope
-	if(numByteToRead > 0x01) {
-
+	/* Read Bit has to be set to 1
+	 * Value of the MS bit:
+	 * - When 0, the address will remain unchanged in multiple read/write commands.
+	 * - When 1, the address will be auto incremented in multiple read/write commands.
+	 */
+	if(numByteToRead > 0x01)
+	{
+		readAddr |= (uint8_t)(0x80 | 0x40);
 	}
-	else {
-
+	else
+	{
+		readAddr |= (uint8_t)0x80;
 	}
+	/* Set chip select Low at the start of the transmission */
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
+
+	/* Send the Address of the indexed register */
+	if(HAL_SPI_Transmit(&spiHandle, &readAddr, 1, L3GD20_FLAG_TIMEOUT) != HAL_OK)
+	{
+		/* Transfer error in transmission process */
+		Error_Handler();
+	}
+
+	/* Receive the data that will be read from the device (MSB First) */
+	if(HAL_SPI_Receive(&spiHandle, pBuffer, numByteToRead, L3GD20_FLAG_TIMEOUT) != HAL_OK)
+	{
+		/* Transfer error in transmission process */
+		Error_Handler();
+	}
+
+	/* Set chip select High at the end of the transmission */
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
 }  
 
 
